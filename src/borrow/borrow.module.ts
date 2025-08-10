@@ -1,7 +1,9 @@
 import { Module } from '@nestjs/common';
+import { BorrowController } from './borrow.controller';
+import { BorrowService } from './borrow.service';
 
 @Module({
-  controllers: [],
-  providers: [],
+  controllers: [BorrowController],
+  providers: [BorrowService],
 })
 export class BorrowModule {}
