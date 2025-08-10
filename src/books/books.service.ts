@@ -1,5 +1,4 @@
 import { BadRequestException, Injectable, NotFoundException, Inject } from '@nestjs/common';
-import type { Cache } from 'cache-manager';
 import axios from 'axios';
 import { InjectRepository } from '@nestjs/typeorm';
 import { ILike, Like, Repository } from 'typeorm';
@@ -12,8 +11,7 @@ export class BooksService {
   constructor(
     @InjectRepository(Book)
     private readonly bookRepository: Repository<Book>,
-    @Inject('CACHE_MANAGER')
-    private readonly cacheManager: Cache,
+    @Inject('REDIS_CLIENT') private readonly redis: any
   ) {}
 
   async create(createBookDto: CreateBookDto): Promise<Book> {
@@ -63,10 +61,16 @@ export class BooksService {
 
   async newBook(query: {word: string}): Promise<any> {
     const cacheKey = `google_books_${query.word}`;
-    const cached = await this.cacheManager.get(cacheKey);
-    if (cached) {
-      return cached;
+    // Cek cache Redis
+    const cachedBooks = await this.redis.get(cacheKey);
+    if (cachedBooks) {
+      console.log("🚀 ~ BooksService ~ newBook ~ cachedBooks:", cachedBooks)
+      // Jika ada, parse dan return
+      return JSON.parse(cachedBooks);
     }
+    console.log("no cache found");
+
+    
     try {
       const response = await axios.get(
         `https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(query.word)}`
@@ -77,9 +81,11 @@ export class BooksService {
         isbn: item.volumeInfo.industryIdentifiers?.find((id: any) => id.type === 'ISBN_13')?.identifier || '',
         coverUrl: item.volumeInfo.imageLinks?.thumbnail || '',
       })) || [];
-      await this.cacheManager.set(cacheKey, books, 3600); // cache for 1 hour
+      // Simpan ke Redis
+      await this.redis.set(cacheKey, JSON.stringify(books), 'EX', 3600);
       return books;
     } catch (error) {
+      console.error('Error fetching from Google Books API:', error);
       throw new BadRequestException('Failed to fetch from Google Books API');
     }
   }

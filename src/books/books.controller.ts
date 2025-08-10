@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, Query } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, Query, BadRequestException } from '@nestjs/common';
 import { BooksService } from './books.service';
 import { CreateBookDto } from './dto/create-book.dto';
 import { UpdateBookDto } from './dto/update-book.dto';
@@ -88,7 +88,14 @@ export class BooksController {
   @ApiBearerAuth('access-token')
   @Roles('ADMIN')
   @ApiOkResponse({ type: [Book], description: 'List of new books.' })
-  findNewBook(@Body() query: {word: string}): Promise<any> {
+  findNewBook(@Query('word') word: string): Promise<any> {
+    if (!word) {
+      throw new BadRequestException('Word is required');
+    }
+
+    const query = {
+      word: word,
+    }
     return this.booksService.newBook(query);
   }
 }

@@ -42,11 +42,18 @@ export class BorrowService {
     });
   }
 
-  async returnBook(borrowId: number): Promise<Borrow> {
+  async returnBook(borrowId: number, userId: number): Promise<Borrow> {
     return await this.dataSource.transaction(async manager => {
-      const borrow = await manager.findOne(Borrow, { where: { id: borrowId }, relations: ['book'] });
+      const user = await manager.findOne(User, { where: { id: userId } });
+      if (!user) {
+        throw new NotFoundException('User not found');
+      }
+      const borrow = await manager.findOne(Borrow, { where: { id: borrowId }, relations: ['book', 'user'] });
       if (!borrow) {
         throw new NotFoundException('Borrow record not found');
+      }
+      if (borrow.user.id !== user.id) {
+        throw new NotFoundException('You are not the borrower');
       }
       if (borrow.status !== 'BORROWED') {
         throw new NotFoundException('Book is not currently borrowed');

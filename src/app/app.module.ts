@@ -9,6 +9,9 @@ import { User } from '../entities/user.entity';
 import { Book } from '../entities/book.entity';
 import { UsersModule } from '../users/users.module';
 import { ConfigModule } from '@nestjs/config';
+import { RedisModule } from 'src/redis/redis.module';
+import { BorrowModule } from '../borrow/borrow.module';
+import { Borrow } from 'src/entities/borrow.entity';
 
 @Module({
   imports: [
@@ -16,15 +19,11 @@ import { ConfigModule } from '@nestjs/config';
     TypeOrmModule.forRoot({
       type: 'postgres',
       url: process.env.DATABASE_URL,
-      entities: [User, Book],
+      entities: [User, Book, Borrow],
       synchronize: true,
     }),
-    CacheModule.register({
-      isGlobal: true,
-      store: require('cache-manager-redis-store'),
-      url: process.env.REDIS_URL,
-    }),
-    AuthModule, BooksModule, UsersModule],
+    AuthModule, BooksModule, UsersModule, BorrowModule, RedisModule ],
+
 
   controllers: [AppController],
 
