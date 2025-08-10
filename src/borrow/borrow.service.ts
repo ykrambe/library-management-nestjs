@@ -58,4 +58,18 @@ export class BorrowService {
       return await manager.save(borrow);
     });
   }
+
+  async getBorrowHistory(userId: number): Promise<Borrow[]> {
+    return await this.borrowRepository.find({
+      where: { user: { id: userId } },
+      relations: ['book'],
+    });
+  }
+
+  async getBorrowedBooks(userId: number): Promise<Borrow[]> {
+    return await this.borrowRepository.find({
+      where: { user: { id: userId }, status: 'BORROWED' },
+      relations: ['book'],
+    });
+  }
 }

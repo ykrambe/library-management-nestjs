@@ -1,6 +1,6 @@
 import { IsString, IsNotEmpty, IsEmail, Min, Max, IsOptional, IsEnum } from 'class-validator';
 import { Role } from '../../auth/enums/role.enums';
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { ApiProperty } from '@nestjs/swagger';
 
 export class CreateUserDto {
   @ApiProperty({ description: 'Nama depan user', example: 'Budi' })
@@ -24,7 +24,6 @@ export class CreateUserDto {
   @IsNotEmpty()
   password: string;
 
-  @ApiPropertyOptional({ description: 'Role user', example: 'USER', enum: Role })
   @IsOptional()
   @IsEnum(Role)
   role?: Role;

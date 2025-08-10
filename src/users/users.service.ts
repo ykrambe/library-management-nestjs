@@ -4,6 +4,7 @@ import { FindOneOptions, Repository } from 'typeorm';
 import { CreateUserDto } from './dto/create-user.dto';
 import { User } from '../entities/user.entity';
 import * as bcrypt from 'bcrypt';
+import { Role } from 'src/auth/enums/role.enums';
 
 @Injectable()
 export class UsersService {
@@ -36,7 +37,9 @@ export class UsersService {
 
   async findAll(): Promise<User[]> {
     return this.userRepository.find({
-      relations: ['borrows', 'borrows.book'],
+      where: {
+        role: Role.MEMBER,
+      },
     });
   }
 }

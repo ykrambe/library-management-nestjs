@@ -1,6 +1,8 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException, Inject } from '@nestjs/common';
+import type { Cache } from 'cache-manager';
+import axios from 'axios';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { ILike, Like, Repository } from 'typeorm';
 import { Book } from '../entities/book.entity';
 import { CreateBookDto } from './dto/create-book.dto';
 import { UpdateBookDto } from './dto/update-book.dto';
@@ -10,6 +12,8 @@ export class BooksService {
   constructor(
     @InjectRepository(Book)
     private readonly bookRepository: Repository<Book>,
+    @Inject('CACHE_MANAGER')
+    private readonly cacheManager: Cache,
   ) {}
 
   async create(createBookDto: CreateBookDto): Promise<Book> {
@@ -42,4 +46,42 @@ export class BooksService {
     if (!book) throw new NotFoundException(`Book with id ${id} not found`);
     await this.bookRepository.remove(book);
   }
+
+  async findQuery(query: { title?: string, author?: string, isbn?: string }): Promise<Book[]> {
+    const { title, author, isbn } = query;
+    if (!title && !author && !isbn) {
+      throw new BadRequestException('At least one query parameter is required');
+    }
+    return this.bookRepository.find({
+      where: {
+        title: ILike(`%${title}%`),// tambahkan regex untuk pencarian tidak case sensitive
+        authors: ILike(`%${author}%`),
+        isbn: ILike(`%${isbn}%`),
+      }
+    });
+  }
+
+  async newBook(query: {word: string}): Promise<any> {
+    const cacheKey = `google_books_${query.word}`;
+    const cached = await this.cacheManager.get(cacheKey);
+    if (cached) {
+      return cached;
+    }
+    try {
+      const response = await axios.get(
+        `https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(query.word)}`
+      );
+      const books = response.data.items?.map((item: any) => ({
+        title: item.volumeInfo.title,
+        authors: item.volumeInfo.authors,
+        isbn: item.volumeInfo.industryIdentifiers?.find((id: any) => id.type === 'ISBN_13')?.identifier || '',
+        coverUrl: item.volumeInfo.imageLinks?.thumbnail || '',
+      })) || [];
+      await this.cacheManager.set(cacheKey, books, 3600); // cache for 1 hour
+      return books;
+    } catch (error) {
+      throw new BadRequestException('Failed to fetch from Google Books API');
+    }
+  }
+
 }

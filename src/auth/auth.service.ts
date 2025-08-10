@@ -17,7 +17,7 @@ export class AuthService {
     if (!user) throw new NotFoundException('User not found');
     const isPasswordValid = await bcrypt.compare(loginDto.password, user.password);
     if (!isPasswordValid) throw new UnauthorizedException('Invalid password');
-    const payload = { email: user.email, role: user.role, id: user.id, first_name: user.firstName, last_name: user.lastName };
+    const payload = { sub: user.id, email: user.email, role: user.role, first_name: user.firstName, last_name: user.lastName };
     return {
       access_token: this.jwtService.sign(payload),
       user: {
